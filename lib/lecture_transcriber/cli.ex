@@ -1,30 +1,47 @@
 defmodule LectureTranscriber.CLI do
-  alias LectureTranscriber.{ExternalTool, Pipeline}
+  alias LectureTranscriber.{ExternalTool, Pipeline, Config, ModelResolver, BundledTools}
 
   def main(["transcribe" | rest]) do
     {opts, args, _} =
       OptionParser.parse(rest,
         strict: [
           model: :string,
+          models_dir: :string,
           out_dir: :string,
           lang: :string,
           whisper_bin: :string,
           ffmpeg_bin: :string,
           tesseract_bin: :string,
           scene_threshold: :float,
-          no_slides: :boolean
+          no_slides: :boolean,
+          config: :string
         ]
       )
 
+    config = Config.load(opts[:config])
+
+    model =
+      ModelResolver.resolve(
+        opts[:model] || config[:model],
+        opts[:models_dir] || config[:models_dir]
+      )
+
     with [video_path] <- args,
-         model_path when is_binary(model_path) <- opts[:model] do
+         model_path when is_binary(model_path) <- model do
       run_opts =
-        [lang: opts[:lang] || "en", slides: not (opts[:no_slides] || false)]
-        |> put_if_present(:out_dir, opts[:out_dir])
-        |> put_if_present(:whisper_bin, opts[:whisper_bin])
-        |> put_if_present(:ffmpeg_bin, opts[:ffmpeg_bin])
-        |> put_if_present(:tesseract_bin, opts[:tesseract_bin])
-        |> put_if_present(:scene_threshold, opts[:scene_threshold])
+        [
+          lang: opts[:lang] || config[:lang] || "en",
+          slides: not (opts[:no_slides] || false),
+          out_dir: opts[:out_dir] || config[:out_dir],
+          whisper_bin:
+            opts[:whisper_bin] || config[:whisper_bin] || BundledTools.path("whisper-cli") ||
+              "whisper-cli",
+          ffmpeg_bin:
+            opts[:ffmpeg_bin] || config[:ffmpeg_bin] || BundledTools.path("ffmpeg") || "ffmpeg",
+          tesseract_bin: opts[:tesseract_bin] || config[:tesseract_bin] || "tesseract",
+          scene_threshold: opts[:scene_threshold] || config[:scene_threshold] || 0.4
+        ]
+        |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
       case Pipeline.transcribe_video(video_path, model_path, run_opts) do
         {:ok, %{markdown: md, srt: srt}} ->
@@ -55,14 +72,18 @@ defmodule LectureTranscriber.CLI do
     usage:
       lecture_transcriber #{transcribe_usage()}
       lecture_transcriber ffmpeg-check
+
+    config file (JSON, all keys optional): #{Config.default_path()}
+      model, models_dir, out_dir, lang, whisper_bin, ffmpeg_bin, tesseract_bin, scene_threshold
+
+    --model accepts either a full path or a short name (e.g. "base.en") resolved
+    against --models-dir / config models_dir as "<models_dir>/ggml-<name>.bin".
     """)
   end
 
   defp transcribe_usage do
-    "transcribe <video> --model <path> [--out-dir DIR] [--lang en] [--whisper-bin BIN] " <>
-      "[--ffmpeg-bin BIN] [--tesseract-bin BIN] [--scene-threshold FLOAT] [--no-slides]"
+    "transcribe <video> --model <path-or-name> [--models-dir DIR] [--out-dir DIR] [--lang en] " <>
+      "[--whisper-bin BIN] [--ffmpeg-bin BIN] [--tesseract-bin BIN] [--scene-threshold FLOAT] " <>
+      "[--no-slides] [--config PATH]"
   end
-
-  defp put_if_present(keyword, _key, nil), do: keyword
-  defp put_if_present(keyword, key, value), do: Keyword.put(keyword, key, value)
 end

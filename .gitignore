@@ -24,3 +24,6 @@ lecture_transcriber-*.tar
 
 # Burrito build output (packaged binaries).
 /burrito_out/
+
+# Bundled external tool binaries, fetched/built by bin/fetch_tools.sh.
+/priv/bin/
