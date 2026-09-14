@@ -9,17 +9,22 @@ defmodule LectureTranscriber.CLI do
           out_dir: :string,
           lang: :string,
           whisper_bin: :string,
-          ffmpeg_bin: :string
+          ffmpeg_bin: :string,
+          tesseract_bin: :string,
+          scene_threshold: :float,
+          no_slides: :boolean
         ]
       )
 
     with [video_path] <- args,
          model_path when is_binary(model_path) <- opts[:model] do
       run_opts =
-        [lang: opts[:lang] || "en"]
+        [lang: opts[:lang] || "en", slides: not (opts[:no_slides] || false)]
         |> put_if_present(:out_dir, opts[:out_dir])
-        |> put_if_present(:bin, opts[:whisper_bin])
+        |> put_if_present(:whisper_bin, opts[:whisper_bin])
         |> put_if_present(:ffmpeg_bin, opts[:ffmpeg_bin])
+        |> put_if_present(:tesseract_bin, opts[:tesseract_bin])
+        |> put_if_present(:scene_threshold, opts[:scene_threshold])
 
       case Pipeline.transcribe_video(video_path, model_path, run_opts) do
         {:ok, %{markdown: md, srt: srt}} ->
@@ -54,7 +59,8 @@ defmodule LectureTranscriber.CLI do
   end
 
   defp transcribe_usage do
-    "transcribe <video> --model <path> [--out-dir DIR] [--lang en] [--whisper-bin BIN] [--ffmpeg-bin BIN]"
+    "transcribe <video> --model <path> [--out-dir DIR] [--lang en] [--whisper-bin BIN] " <>
+      "[--ffmpeg-bin BIN] [--tesseract-bin BIN] [--scene-threshold FLOAT] [--no-slides]"
   end
 
   defp put_if_present(keyword, _key, nil), do: keyword

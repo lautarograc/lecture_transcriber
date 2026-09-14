@@ -2,7 +2,7 @@ defmodule LectureTranscriber.Whisper do
   alias LectureTranscriber.ExternalTool
 
   def transcribe(wav_path, model_path, opts \\ []) do
-    bin = Keyword.get(opts, :bin, "whisper-cli")
+    bin = Keyword.get(opts, :whisper_bin, "whisper-cli")
     lang = Keyword.get(opts, :lang, "en")
     out_prefix = Path.rootname(wav_path)
     json_path = out_prefix <> ".json"

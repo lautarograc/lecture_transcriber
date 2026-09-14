@@ -1,10 +1,28 @@
 defmodule LectureTranscriber.Render do
-  def to_markdown(segments) do
-    segments
-    |> Enum.map(fn %{start_ms: start_ms, text: text} ->
-      "**[#{timestamp(start_ms)}]** #{text}"
-    end)
+  def to_markdown(segments, slides \\ [], opts \\ []) do
+    image_dir = Keyword.get(opts, :image_dir_name, "slides")
+
+    speech_events = Enum.map(segments, &{&1.start_ms, :speech, &1})
+    slide_events = Enum.map(slides, &{&1.time_ms, :slide, &1})
+
+    (speech_events ++ slide_events)
+    |> Enum.sort_by(fn {time_ms, _type, _data} -> time_ms end)
+    |> Enum.map(&render_event(&1, image_dir))
     |> Enum.join("\n\n")
+  end
+
+  defp render_event({start_ms, :speech, %{text: text}}, _image_dir) do
+    "**[#{timestamp(start_ms)}]** #{text}"
+  end
+
+  defp render_event({time_ms, :slide, %{image_path: path, ocr_text: ocr_text}}, image_dir) do
+    image_name = Path.basename(path)
+    heading = "---\n\n**[#{timestamp(time_ms)}] Slide**\n\n![slide](#{image_dir}/#{image_name})"
+
+    case ocr_text do
+      "" -> heading
+      text -> heading <> "\n\n> " <> String.replace(text, "\n", "\n> ")
+    end
   end
 
   def to_srt(segments) do
