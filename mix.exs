@@ -21,7 +21,8 @@ defmodule LectureTranscriber.MixProject do
 
   defp deps do
     [
-      {:burrito, "~> 1.0"}
+      {:burrito, "~> 1.0"},
+      {:jason, "~> 1.4"}
     ]
   end
 
