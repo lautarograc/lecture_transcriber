@@ -9,6 +9,16 @@ defmodule LectureTranscriber.BundledTools do
     end
   end
 
+  def tessdata_dir do
+    with priv_dir when priv_dir != nil <- priv_dir(),
+         candidate = Path.join(priv_dir, "tessdata"),
+         true <- File.dir?(candidate) do
+      candidate
+    else
+      _ -> nil
+    end
+  end
+
   defp priv_dir do
     case :code.priv_dir(:lecture_transcriber) do
       {:error, :bad_name} -> nil

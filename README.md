@@ -12,43 +12,42 @@ on-screen slide content into one document with timestamps.
 
 ## Install
 
-### Prerequisites (for building from source)
+### Prerequisites (for building from source, Linux)
 
 - [Elixir](https://elixir-lang.org/install.html) 1.18+ and Erlang/OTP
 - [Zig](https://ziglang.org/download/) (used by [Burrito](https://github.com/burrito-elixir/burrito) to build the native binary)
-- `tesseract-ocr` installed on the system (see below — this one isn't bundled)
+- A Debian/Ubuntu-family host, `cmake`, a C/C++ toolchain, and `pkg-config`
+  (`bin/fetch_tools.sh` builds `tesseract` and its image-format dependencies
+  from source, statically)
 
 ### Build
 
 ```bash
 mix deps.get
-./bin/fetch_tools.sh      # fetches/builds ffmpeg and whisper-cli into priv/bin/
+./bin/fetch_tools.sh      # fetches/builds ffmpeg, whisper-cli, tesseract into priv/
 MIX_ENV=prod mix release
 ```
 
 This produces `burrito_out/lecture_transcriber_linux` and
 `burrito_out/lecture_transcriber_windows.exe` — standalone binaries with
-`ffmpeg` and `whisper-cli` bundled inside. Copy the one for your platform
-wherever you like; no Elixir/Erlang install is needed to run it.
+`ffmpeg`, `whisper-cli`, and `tesseract` all bundled inside. Copy the one for
+your platform wherever you like; no other install is needed to run it (not
+even Elixir/Erlang, and not `tesseract-ocr` from your system package
+manager).
 
-### tesseract
+`tesseract`'s normal shared-library build pulls in ~50 libraries via
+`libcurl` — a full TLS/Kerberos/LDAP stack it only needs to fetch training
+data over the network, irrelevant here. `fetch_tools.sh` instead builds it
+statically with that support disabled, so the bundled binary needs nothing
+beyond the same base `libc`/`libstdc++` that `ffmpeg` and `whisper-cli`
+already require.
 
-`tesseract` is not bundled — its dependency chain pulls in a full
-TLS/Kerberos/LDAP stack it doesn't need for local OCR, so vendoring it isn't
-worth it right now. Install it from your system's package manager:
+To use your own `tesseract` instead of the bundled one, pass
+`--tesseract-bin <path>`.
 
-```bash
-# Debian/Ubuntu
-sudo apt install tesseract-ocr
-
-# macOS
-brew install tesseract
-
-# Windows
-# https://github.com/UB-Mannheim/tesseract/wiki
-```
-
-Or point at your own build with `--tesseract-bin`.
+**Licensing note:** the bundled `ffmpeg` is built with `--enable-gpl`. That
+doesn't change this project's own MIT license, but if you redistribute the
+built binary, GPL's source-availability terms apply to that component.
 
 ### Whisper model
 

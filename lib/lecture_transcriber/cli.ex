@@ -38,7 +38,9 @@ defmodule LectureTranscriber.CLI do
               "whisper-cli",
           ffmpeg_bin:
             opts[:ffmpeg_bin] || config[:ffmpeg_bin] || BundledTools.path("ffmpeg") || "ffmpeg",
-          tesseract_bin: opts[:tesseract_bin] || config[:tesseract_bin] || "tesseract",
+          tesseract_bin:
+            opts[:tesseract_bin] || config[:tesseract_bin] || BundledTools.path("tesseract") ||
+              "tesseract",
           scene_threshold: opts[:scene_threshold] || config[:scene_threshold] || 0.4
         ]
         |> Enum.reject(fn {_key, value} -> is_nil(value) end)
